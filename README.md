@@ -74,6 +74,10 @@ export PROJECT_ID=your-project REGION=asia-south1 GEMINI_API_KEY=xxx
 
 Deploys `agrinet-node-ts`, `agrinet-node-od` (peered via their real public URLs — federation runs over the open internet) and `agrinet-frontend`. Warm all three with `curl $URL/v1/health` before recording the demo.
 
+### Vercel alternative (frontend only)
+
+[vercel.json](vercel.json) is included: import the repo into Vercel and it builds `frontend/` as a static SPA. Set the environment variables `VITE_NODE_TS` and `VITE_NODE_OD` in the Vercel project settings to your deployed backend node URLs (they are baked in at build time — redeploy after changing them). The FastAPI state nodes themselves need a server runtime (SQLite state + peer push), so keep them on Cloud Run or similar.
+
 ## Demo script (3–5 min video)
 
 1. Farmer view (phone width). Pick the Warangal farm, crop paddy → **Get Advisory**.
