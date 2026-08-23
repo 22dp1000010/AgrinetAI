@@ -78,9 +78,12 @@ class FederationService:
     # --- protocol operations ---
 
     def receive_alert(self, alert: Alert) -> bool:
-        """Idempotent receipt of an alert pushed by a peer node."""
+        """Idempotent receipt of an alert pushed by a peer node. An alert
+        whose origin is this node (an echo of our own broadcast) is stored
+        as local, not peer-received."""
+        from_peer = alert.origin_state != self.settings.state_id
         return db.upsert_alert(self.conn, alert.model_dump(mode="json"),
-                               received_from_peer=True)
+                               received_from_peer=from_peer)
 
     def push_alert_to_peers(self, alert: Alert) -> dict[str, bool]:
         results = {}

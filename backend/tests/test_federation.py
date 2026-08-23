@@ -12,7 +12,7 @@ from tests.conftest import make_settings
 def _alert_payload(**overrides):
     payload = {
         "id": "11111111-1111-1111-1111-111111111111",
-        "origin_state": "TS",
+        "origin_state": "OD",
         "disease": "brown planthopper",
         "crop": "paddy",
         "district": "Warangal",
@@ -40,7 +40,16 @@ def test_receive_alert_and_list(client):
     alerts = client.get("/v1/alerts").json()["alerts"]
     assert len(alerts) == 1
     assert alerts[0]["received_from_peer"] is True
-    assert alerts[0]["origin_state"] == "TS"
+    assert alerts[0]["origin_state"] == "OD"
+
+
+def test_receive_own_alert_echo_stored_as_local(client):
+    # The test node is TS: an alert with origin TS arriving on /v1/alerts is
+    # an echo of its own broadcast, not a peer alert.
+    r = client.post("/v1/alerts", json=_alert_payload(origin_state="TS"))
+    assert r.status_code == 202
+    alerts = client.get("/v1/alerts").json()["alerts"]
+    assert alerts[0]["received_from_peer"] is False
 
 
 def test_receive_alert_is_idempotent(client):

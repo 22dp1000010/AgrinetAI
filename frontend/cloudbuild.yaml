@@ -1,0 +1,20 @@
+# Builds the frontend image with the state-node URLs baked in (Vite build args).
+# Usage (from frontend/):
+#   gcloud builds submit --config cloudbuild.yaml \
+#     --substitutions _NODE_TS=https://...,_NODE_OD=https://...
+substitutions:
+  _NODE_TS: http://localhost:8001
+  _NODE_OD: http://localhost:8002
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - --build-arg
+      - VITE_NODE_TS=${_NODE_TS}
+      - --build-arg
+      - VITE_NODE_OD=${_NODE_OD}
+      - -t
+      - asia-south1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/agrinet-frontend:latest
+      - .
+images:
+  - asia-south1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/agrinet-frontend:latest

@@ -89,12 +89,41 @@ def seed_outbreak(client: httpx.Client, node: str, reports: int = 3):
     return triggered
 
 
+def force_outbreak_alert(client: httpx.Client, node: str, peer: str):
+    """Live-mode fallback: with DEMO_MODE=0 Gemini vision correctly refuses
+    to diagnose the synthetic seed image with confidence, so no alert fires.
+    Create the demo alert through the federation protocol instead: origin=TS,
+    delivered to the origin node (stored as its own/local alert thanks to
+    echo detection) and to the peer (stored as a federated early warning)."""
+    import uuid
+
+    alert = {
+        "id": str(uuid.uuid4()),
+        "origin_state": "TS",
+        "disease": "Brown planthopper (Nilaparvata lugens)",
+        "crop": "paddy",
+        "district": "Warangal",
+        "severity": "high",
+        "report_count": 3,
+        "window_days": 7,
+        "message": ("Brown planthopper outbreak in paddy: 3 confirmed reports "
+                    "in Warangal district (Telangana) within 7 days."),
+    }
+    for target in [node] + ([peer] if peer else []):
+        resp = client.post(f"{target}/v1/alerts", json=alert)
+        resp.raise_for_status()
+        print(f"  alert delivered to {target} (duplicate={resp.json()['duplicate']})")
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--node", default="http://localhost:8001",
                         help="base URL of the origin (Telangana) node")
     parser.add_argument("--peer", default="http://localhost:8002",
                         help="peer node to verify alert arrival (blank to skip)")
+    parser.add_argument("--queries", type=int, default=30,
+                        help="advisory queries to seed (use ~10 against live-"
+                             "Gemini nodes to stay inside free-tier rate limits)")
     args = parser.parse_args()
 
     with httpx.Client(timeout=60) as client:
@@ -102,14 +131,18 @@ def main():
         print(f"Seeding node: {health['state_name']} ({args.node})")
 
         print("Seeding heatmap queries…")
-        seed_queries(client, args.node)
+        seed_queries(client, args.node, n=args.queries)
 
         print("Posting diagnosis reports (outbreak threshold = 3)…")
         triggered = seed_outbreak(client, args.node)
-        if not triggered:
-            print("  note: no new alert (one may already exist for this district)")
 
         alerts = client.get(f"{args.node}/v1/alerts").json()["alerts"]
+        if not triggered and not alerts:
+            print("  no alert from diagnoses (live Gemini declined the synthetic "
+                  "image — correct safety behaviour); forcing the demo alert "
+                  "via the federation protocol…")
+            force_outbreak_alert(client, args.node, args.peer)
+            alerts = client.get(f"{args.node}/v1/alerts").json()["alerts"]
         print(f"Origin node now has {len(alerts)} alert(s).")
 
         if args.peer:

@@ -4,6 +4,16 @@
 
 Each Indian state runs its own **AgriNet node** on a shared open schema (the AgriNet Protocol). Farmers get grounded, localized, voice-first advisories powered by **satellite + soil + weather + Gemini**; states exchange insights and disease-outbreak early warnings through the federation API. Designed as a **digital public good**: any state joins by deploying one container.
 
+## 🌐 Live deployment
+
+| Service | URL |
+|---|---|
+| **Frontend** (farmer app + officer dashboard) | https://agrinet-frontend-103630666251.asia-south1.run.app |
+| Telangana node (API + AgriNet Protocol) | https://agrinet-node-ts-103630666251.asia-south1.run.app/docs |
+| Odisha node (API + AgriNet Protocol) | https://agrinet-node-od-103630666251.asia-south1.run.app/docs |
+
+The two nodes federate **over the public internet** — an outbreak alert created on the Telangana node appears on the Odisha node's dashboard via the AgriNet Protocol.
+
 ```mermaid
 flowchart TB
     subgraph FED["AgriNet Protocol — open schema, /v1/* REST"]
