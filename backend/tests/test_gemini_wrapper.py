@@ -33,10 +33,34 @@ def test_demo_mode_language_fallback_to_english(tmp_path):
         svc.generate_json("nonexistent_task", "p")
 
 
-def test_live_mode_without_key_raises(tmp_path):
-    svc = make_service(tmp_path, demo_mode=False, gemini_api_key="")
+def test_live_mode_without_key_raises_when_fallback_off(tmp_path):
+    svc = make_service(tmp_path, demo_mode=False, gemini_api_key="",
+                       demo_fallback=False)
     with pytest.raises(GeminiError, match="GEMINI_API_KEY"):
         svc.generate_json("advisory", "prompt")
+
+
+def test_live_mode_without_key_falls_back_to_demo(tmp_path):
+    # demo_fallback defaults to True: a dead key/quota must not break the app.
+    svc = make_service(tmp_path, demo_mode=False, gemini_api_key="")
+    result = svc.generate_json("advisory", "prompt", language="en")
+    assert result["advisory"]  # served from the canned fixture
+
+
+def test_live_failure_falls_back_to_demo(tmp_path, monkeypatch):
+    svc = make_service(tmp_path, demo_mode=False, gemini_api_key="test-key")
+
+    class FakeModels:
+        def generate_content(self, **kwargs):
+            raise RuntimeError("429 RESOURCE_EXHAUSTED: quota out")
+
+    class FakeClient:
+        models = FakeModels()
+
+    monkeypatch.setattr(svc, "_get_client", lambda: FakeClient())
+    monkeypatch.setattr(gemini_module.time, "sleep", lambda s: None)
+    result = svc.generate_json("ask", "q", language="te")
+    assert "answer" in result  # Telugu canned fixture served after retries
 
 
 def test_cache_key_stability_and_image_sensitivity():
@@ -79,7 +103,8 @@ def test_live_mode_uses_cache_and_retries_on_429(tmp_path, monkeypatch):
 
 
 def test_live_mode_gives_up_on_non_retryable(tmp_path, monkeypatch):
-    svc = make_service(tmp_path, demo_mode=False, gemini_api_key="test-key")
+    svc = make_service(tmp_path, demo_mode=False, gemini_api_key="test-key",
+                       demo_fallback=False)
 
     class FakeModels:
         def generate_content(self, **kwargs):

@@ -58,8 +58,20 @@ class GeminiService:
         if cached is not None:
             return json.loads(cached)
 
-        text = self._call_with_retry(prompt, image_bytes, image_mime)
-        parsed = self._parse_json(text)
+        try:
+            text = self._call_with_retry(prompt, image_bytes, image_mime)
+            parsed = self._parse_json(text)
+        except GeminiError:
+            # Live call exhausted its retries (quota, bad key, network).
+            # With demo_fallback on, degrade gracefully to the canned
+            # response so the app keeps working; the failure is logged.
+            if self.settings.demo_fallback:
+                log.warning(
+                    "Live Gemini call for task '%s' failed; serving demo fallback",
+                    task, exc_info=True,
+                )
+                return self._demo_response(task, language)
+            raise
         db.cache_put(self.conn, cache_key, json.dumps(parsed))
         return parsed
 

@@ -29,6 +29,9 @@ class Settings(BaseSettings):
     port: int = 8001
     peers: str = ""
     demo_mode: bool = True
+    # If a live Gemini call fails (quota, invalid key, network), serve the
+    # canned demo response instead of erroring — the demo never dies.
+    demo_fallback: bool = True
     ee_enabled: bool = False
     ee_project: str = ""
     outbreak_threshold: int = 3
