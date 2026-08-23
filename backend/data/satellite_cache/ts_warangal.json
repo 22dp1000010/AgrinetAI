@@ -1,0 +1,13 @@
+{
+  "farm_id": "ts-warangal-01",
+  "lat": 17.98,
+  "lon": 79.53,
+  "computed_on": "2026-08-14",
+  "window_days": 30,
+  "note": "Pre-computed from Sentinel-2 SR Harmonized via Earth Engine (scripts/precompute_satellite.py). Representative kharif-season values for Warangal paddy.",
+  "features": {
+    "ndvi_mean": 0.62,
+    "ndvi_trend": "declining",
+    "ndwi_mean": -0.18
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "advisory": [
+    {
+      "title": "Irrigate within 2 days — crop vigour is dropping",
+      "detail": "Satellite readings show your field's greenness (NDVI 0.62) has been declining over the last 30 days while only light rain is expected this week. Give one irrigation now and keep 2-5 cm of standing water through tillering.",
+      "urgency": "high"
+    },
+    {
+      "title": "Watch for brown planthopper at the base of plants",
+      "detail": "Warm, humid weather like this week's forecast favours brown planthopper. Check the base of hills for small brown insects and circular patches of drying plants. If you see more than 10 hoppers per hill, drain the field for 3-4 days and contact your Krishi Vigyan Kendra before any spray.",
+      "urgency": "high"
+    },
+    {
+      "title": "Skip the next urea top dressing for now",
+      "detail": "Extra nitrogen makes planthopper problems worse. Since hopper risk is high this week, delay the next urea application until the risk passes.",
+      "urgency": "medium"
+    }
+  ],
+  "regenerative_recommendations": [
+    "Practise alternate wetting and drying (AWD) with a field water tube — saves about 25% water and reduces methane.",
+    "Open 30 cm alleyways after every 2-3 metres of planting to improve airflow and reduce planthopper build-up.",
+    "After harvest, grow dhaincha green manure and incorporate it at flowering to add 60-80 kg nitrogen per hectare."
+  ],
+  "irrigation_guidance": "Irrigate within 2 days. With only ~12 mm of rain expected this week and declining crop vigour, do not wait for rainfall. Maintain 2-5 cm standing water during tillering.",
+  "risk_flags": [
+    { "type": "pest", "message": "High brown planthopper risk: humidity above 75% and temperatures of 28-32°C forecast this week." },
+    { "type": "weather", "message": "Low rainfall expected (about 12 mm over 7 days) while crop vigour is declining." }
+  ],
+  "citations": [
+    { "source": "ICAR–IIRR Kharif Paddy Advisory 2026-07", "excerpt_ref": "paddy_advisory_chunk_2" },
+    { "source": "ICAR–IIRR Kharif Paddy Advisory 2026-07", "excerpt_ref": "paddy_advisory_chunk_3" },
+    { "source": "ICAR Regenerative & Natural Farming Note 2026", "excerpt_ref": "regenerative_practices_chunk_6" }
+  ],
+  "confidence_note": "Based on satellite, soil and weather data for your location plus ICAR advisories. Field scouting is still recommended — satellite data cannot see individual insects."
+}

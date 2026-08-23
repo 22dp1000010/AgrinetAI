@@ -1,0 +1,13 @@
+{
+  "farm_id": "ts-nalgonda-01",
+  "lat": 17.06,
+  "lon": 79.27,
+  "computed_on": "2026-08-14",
+  "window_days": 30,
+  "note": "Pre-computed from Sentinel-2 SR Harmonized via Earth Engine. Representative kharif-season values for Nalgonda cotton.",
+  "features": {
+    "ndvi_mean": 0.48,
+    "ndvi_trend": "stable",
+    "ndwi_mean": -0.24
+  }
+}

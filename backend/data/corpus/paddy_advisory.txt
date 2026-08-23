@@ -1,0 +1,27 @@
+[PLACEHOLDER — replace with verbatim extract from ICAR/PJTSAU kharif paddy advisory before submission]
+SOURCE: ICAR–IIRR Kharif Paddy Advisory 2026-07 (placeholder text)
+CROP: paddy (rice)
+
+Water management: Maintain 2-5 cm standing water during tillering. If NDVI or field
+observation shows declining vigour with low rainfall forecast, irrigate immediately;
+moisture stress at panicle initiation can cut yield by 20-30 percent. Practise
+alternate wetting and drying (AWD) where water is scarce: irrigate when water level
+falls 15 cm below soil surface in a field water tube.
+
+Brown planthopper (BPH, Nilaparvata lugens): High humidity (above 75 percent) with
+temperatures of 28-32 C favours outbreaks. Watch the base of hills for hopper burn
+(circular patches of drying plants). Drain water from the field for 3-4 days to
+reduce hopper population. Avoid excess nitrogen; skip a urea top dressing if hopper
+presence is confirmed. Open alleyways of 30 cm after every 2-3 metres of planting.
+Do not apply combination insecticide mixtures without KVK confirmation. If more than
+10 hoppers per hill are seen, consult the local Krishi Vigyan Kendra before any
+chemical spray.
+
+Rice blast (Magnaporthe oryzae): Intermittent rain with cloudy weather favours leaf
+and neck blast. Spindle-shaped lesions with grey centres on leaves are diagnostic.
+Avoid excess nitrogen. Use silicon sources (rice husk ash) to strengthen tissue.
+Seed treatment and need-based fungicide only per label and KVK guidance.
+
+Nutrient management: Apply nitrogen in three splits (basal, tillering, panicle
+initiation). In soils with pH below 6.0, monitor zinc deficiency (khaira disease);
+apply zinc sulphate 25 kg per hectare if leaves show bronzing.

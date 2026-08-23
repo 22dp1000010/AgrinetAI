@@ -1,0 +1,13 @@
+{
+  "farm_id": "od-bargarh-01",
+  "lat": 21.33,
+  "lon": 83.62,
+  "computed_on": "2026-08-14",
+  "window_days": 30,
+  "note": "Pre-computed from Sentinel-2 SR Harmonized via Earth Engine. Representative kharif-season values for Bargarh paddy.",
+  "features": {
+    "ndvi_mean": 0.71,
+    "ndvi_trend": "improving",
+    "ndwi_mean": -0.05
+  }
+}

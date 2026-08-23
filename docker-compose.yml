@@ -1,0 +1,29 @@
+# Local three-container setup (alternative to the venv+npm quickstart).
+# cp .env.example .env first (GEMINI_API_KEY optional — DEMO_MODE=1 works without).
+services:
+  node-ts:
+    build: ./backend
+    ports: ["8001:8080"]
+    environment:
+      STATE_ID: TS
+      PEERS: http://node-od:8080
+      DEMO_MODE: ${DEMO_MODE:-1}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+
+  node-od:
+    build: ./backend
+    ports: ["8002:8080"]
+    environment:
+      STATE_ID: OD
+      PEERS: http://node-ts:8080
+      DEMO_MODE: ${DEMO_MODE:-1}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_NODE_TS: http://localhost:8001
+        VITE_NODE_OD: http://localhost:8002
+    ports: ["5173:8080"]
+    depends_on: [node-ts, node-od]

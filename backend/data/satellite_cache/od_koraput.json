@@ -1,0 +1,13 @@
+{
+  "farm_id": "od-koraput-01",
+  "lat": 18.81,
+  "lon": 82.71,
+  "computed_on": "2026-08-14",
+  "window_days": 30,
+  "note": "Pre-computed from Sentinel-2 SR Harmonized via Earth Engine. Representative kharif-season values for Koraput maize.",
+  "features": {
+    "ndvi_mean": 0.55,
+    "ndvi_trend": "stable",
+    "ndwi_mean": -0.21
+  }
+}

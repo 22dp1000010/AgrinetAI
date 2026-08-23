@@ -1,0 +1,44 @@
+{
+  "farms": [
+    {
+      "id": "ts-warangal-01",
+      "name": "Warangal paddy farm",
+      "state_id": "TS",
+      "district": "Warangal",
+      "lat": 17.98,
+      "lon": 79.53,
+      "crop": "paddy",
+      "area_ha": 1.2
+    },
+    {
+      "id": "ts-nalgonda-01",
+      "name": "Nalgonda cotton farm",
+      "state_id": "TS",
+      "district": "Nalgonda",
+      "lat": 17.06,
+      "lon": 79.27,
+      "crop": "cotton",
+      "area_ha": 2.0
+    },
+    {
+      "id": "od-bargarh-01",
+      "name": "Bargarh paddy farm",
+      "state_id": "OD",
+      "district": "Bargarh",
+      "lat": 21.33,
+      "lon": 83.62,
+      "crop": "paddy",
+      "area_ha": 1.5
+    },
+    {
+      "id": "od-koraput-01",
+      "name": "Koraput maize farm",
+      "state_id": "OD",
+      "district": "Koraput",
+      "lat": 18.81,
+      "lon": 82.71,
+      "crop": "maize",
+      "area_ha": 0.8
+    }
+  ]
+}

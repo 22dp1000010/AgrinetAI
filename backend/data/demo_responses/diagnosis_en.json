@@ -1,0 +1,24 @@
+{
+  "disease": "Brown planthopper (Nilaparvata lugens)",
+  "confidence": "high",
+  "symptoms_observed": [
+    "Yellowing and drying of leaves starting from the tips",
+    "Brownish, circular 'hopper burn' patches spreading outward",
+    "Small brown insects visible at the base of the plant"
+  ],
+  "treatment_steps": [
+    "Drain water from the field for 3-4 days to reduce the hopper population.",
+    "Open 30 cm alleyways after every 2-3 metres of planting to improve airflow.",
+    "Stop urea top dressing until the infestation subsides — excess nitrogen worsens outbreaks.",
+    "Count hoppers per hill; if more than 10, contact your Krishi Vigyan Kendra before any chemical spray."
+  ],
+  "organic_options": [
+    "Encourage natural enemies: mirid bugs and spiders control planthoppers — avoid broad-spectrum insecticides.",
+    "Neem oil spray (5 ml per litre) at the plant base can suppress early-stage populations."
+  ],
+  "escalate_to_expert": false,
+  "citations": [
+    { "source": "ICAR–IIRR Kharif Paddy Advisory 2026-07", "excerpt_ref": "paddy_advisory_chunk_2" }
+  ],
+  "safety_note": "Do not apply insecticide mixtures without confirmation from your local Krishi Vigyan Kendra. This tool never recommends chemical dosages — an expert must confirm them."
+}
