@@ -3,9 +3,9 @@
 import httpx
 import respx
 
-from app import db
 from app.models.protocol import Alert
 from app.services.federation import FederationService
+from app.storage import SQLiteStore
 from tests.conftest import make_settings
 
 
@@ -80,26 +80,45 @@ def test_peers_and_model_registry(tmp_path):
 
 @respx.mock
 def test_push_alert_to_peers_delivers(tmp_path):
-    settings = make_settings(tmp_path, peers="http://peer-od:8002")
-    conn = db.connect(settings.database_path)
+    settings = make_settings(tmp_path, peers="http://peer-od:8002",
+                             federation_token="fed-secret")
+    store = SQLiteStore(settings.database_path)
     route = respx.post("http://peer-od:8002/v1/alerts").mock(
         return_value=httpx.Response(202, json={"accepted": True}))
-    service = FederationService(settings, conn)
+    service = FederationService(settings, store)
     alert = Alert(**{k: v for k, v in _alert_payload().items()
                      if k not in ("created_at",)})
     results = service.push_alert_to_peers(alert)
     assert results == {"http://peer-od:8002": True}
     assert route.called
+    # Peer push carries the shared federation token.
+    assert route.calls[0].request.headers["X-AgriNet-Token"] == "fed-secret"
 
 
 @respx.mock
 def test_push_alert_retries_then_gives_up(tmp_path):
     settings = make_settings(tmp_path, peers="http://peer-down:8002")
-    conn = db.connect(settings.database_path)
+    store = SQLiteStore(settings.database_path)
     route = respx.post("http://peer-down:8002/v1/alerts").mock(
         side_effect=httpx.ConnectError("down"))
-    service = FederationService(settings, conn)
+    service = FederationService(settings, store)
     alert = Alert(origin_state="TS", disease="blast", report_count=3, window_days=7)
     results = service.push_alert_to_peers(alert)
     assert results == {"http://peer-down:8002": False}
     assert route.call_count == 3  # _PUSH_ATTEMPTS
+
+
+def test_federation_write_requires_token_when_configured(tmp_path):
+    from fastapi.testclient import TestClient
+    from app.main import create_app
+    settings = make_settings(tmp_path, federation_token="fed-secret")
+    client = TestClient(create_app(settings))
+    payload = _alert_payload()
+    # No token / wrong token → rejected.
+    assert client.post("/v1/alerts", json=payload).status_code == 401
+    assert client.post("/v1/alerts", json=payload,
+                       headers={"X-AgriNet-Token": "wrong"}).status_code == 401
+    # Correct token → accepted; reads stay public.
+    assert client.post("/v1/alerts", json=payload,
+                       headers={"X-AgriNet-Token": "fed-secret"}).status_code == 202
+    assert client.get("/v1/alerts").status_code == 200

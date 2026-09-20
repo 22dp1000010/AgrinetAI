@@ -108,6 +108,16 @@ Deploys `agrinet-node-ts`, `agrinet-node-od` (peered via their real public URLs 
 - `docs/` — [ARCHITECTURE.md](docs/ARCHITECTURE.md), [AGRINET_PROTOCOL.md](docs/AGRINET_PROTOCOL.md), [PITCH_NOTES.md](docs/PITCH_NOTES.md)
 - `deploy/deploy.sh` — Cloud Run deployment for all three services
 
+## Production hardening
+
+- **Persistent storage:** Cloud Run nodes use **Firestore** (`DB_BACKEND=firestore`) — data survives restarts and scale-to-zero. Locally the default is SQLite; no cloud needed.
+- **Secrets:** the Gemini key and federation token live in **Google Secret Manager** (`--set-secrets`), never in service config or code.
+- **Federation auth:** `POST /v1/alerts|insights` require the shared `X-AgriNet-Token` when `FEDERATION_TOKEN` is set; reads stay public (open data good). Peer pushes send the token automatically.
+- **Rate limiting:** 60 requests/min per client IP on `/api/*` (protects the Gemini quota).
+- **CORS:** restricted to the frontend origin in production (`CORS_ORIGINS`).
+- **Quota resilience:** per-minute 429s retry briefly; per-day quota exhaustion fails fast and serves the canned fallback for 10 minutes instead of stalling requests.
+- **Teardown:** after the hackathon, `PROJECT_ID=agrinet-fed-2026 ./deploy/teardown.sh` deletes the cloud project and stops all billing; the app keeps working locally (SQLite + cached satellite + demo mode).
+
 ## Safety & privacy
 
 - Gemini is instructed to advise **only from provided data + retrieved advisory excerpts**, cite every recommendation, and **never state pesticide dosages** (always "confirm with your KVK").

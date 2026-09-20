@@ -6,13 +6,12 @@ best-effort: a down peer never breaks the farmer-facing request.
 """
 
 import logging
-from sqlite3 import Connection
 
 import httpx
 
-from .. import db
 from ..config import Settings
 from ..models.protocol import Alert, Insight, ModelRegistryEntry, Peer
+from ..storage import Store
 
 log = logging.getLogger(__name__)
 
@@ -21,10 +20,10 @@ _PUSH_TIMEOUT_S = 5.0
 
 
 class FederationService:
-    def __init__(self, settings: Settings, conn: Connection,
+    def __init__(self, settings: Settings, store: Store,
                  http_client: httpx.Client | None = None):
         self.settings = settings
-        self.conn = conn
+        self.store = store
         # Injectable for tests; created lazily otherwise.
         self._http = http_client
 
@@ -41,9 +40,9 @@ class FederationService:
                                          confidence: str = "high") -> Alert | None:
         """Store an anonymized disease report; if it crosses the outbreak
         threshold, create an alert and push it to peers."""
-        db.add_disease_report(self.conn, disease, crop, district, confidence)
-        count = db.count_recent_reports(
-            self.conn, disease, district, self.settings.outbreak_window_days
+        self.store.add_disease_report(disease, crop, district, confidence)
+        count = self.store.count_recent_reports(
+            disease, district, self.settings.outbreak_window_days
         )
         if count < self.settings.outbreak_threshold:
             return None
@@ -64,7 +63,7 @@ class FederationService:
                 f"{self.settings.outbreak_window_days} days."
             ),
         )
-        db.upsert_alert(self.conn, alert.model_dump(mode="json"), received_from_peer=False)
+        self.store.upsert_alert(alert.model_dump(mode="json"), received_from_peer=False)
         self.push_alert_to_peers(alert)
         return alert
 
@@ -72,7 +71,7 @@ class FederationService:
         return any(
             a["disease"] == disease and a["district"] == district
             and not a["received_from_peer"]
-            for a in db.list_alerts(self.conn)
+            for a in self.store.list_alerts()
         )
 
     # --- protocol operations ---
@@ -82,8 +81,8 @@ class FederationService:
         whose origin is this node (an echo of our own broadcast) is stored
         as local, not peer-received."""
         from_peer = alert.origin_state != self.settings.state_id
-        return db.upsert_alert(self.conn, alert.model_dump(mode="json"),
-                               received_from_peer=from_peer)
+        return self.store.upsert_alert(alert.model_dump(mode="json"),
+                                       received_from_peer=from_peer)
 
     def push_alert_to_peers(self, alert: Alert) -> dict[str, bool]:
         results = {}
@@ -94,9 +93,12 @@ class FederationService:
 
     def _push_one(self, base_url: str, payload: dict) -> bool:
         url = f"{base_url}/v1/alerts"
+        headers = {}
+        if self.settings.federation_token:
+            headers["X-AgriNet-Token"] = self.settings.federation_token
         for attempt in range(_PUSH_ATTEMPTS):
             try:
-                resp = self.http.post(url, json=payload)
+                resp = self.http.post(url, json=payload, headers=headers)
                 if resp.status_code < 300:
                     log.info("Alert %s delivered to %s", payload["id"], base_url)
                     return True
@@ -107,13 +109,13 @@ class FederationService:
         return False
 
     def list_alerts(self) -> list[dict]:
-        return db.list_alerts(self.conn)
+        return self.store.list_alerts()
 
     def list_insights(self) -> list[dict]:
-        return db.list_insights(self.conn)
+        return self.store.list_insights()
 
     def add_insight(self, insight: Insight) -> bool:
-        return db.upsert_insight(self.conn, insight.model_dump(mode="json"))
+        return self.store.upsert_insight(insight.model_dump(mode="json"))
 
     def peers(self) -> list[Peer]:
         peers = []

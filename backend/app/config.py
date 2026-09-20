@@ -4,6 +4,7 @@ environment (.env in the repo root), never from code."""
 from functools import lru_cache
 from pathlib import Path
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 BACKEND_DIR = Path(__file__).resolve().parents[1]
@@ -36,8 +37,24 @@ class Settings(BaseSettings):
     ee_project: str = ""
     outbreak_threshold: int = 3
     outbreak_window_days: int = 7
+    # Storage backend: "sqlite" (local default — file per node) or
+    # "firestore" (Cloud Run — persistent, shared project database).
+    db_backend: str = "sqlite"
+    firestore_project: str = ""
     # Overridable so tests can point at a throwaway database.
     db_path: str = ""
+    # Shared secret required on federation write endpoints (POST /v1/*).
+    # Empty = open (local dev). Peers send it as X-AgriNet-Token.
+    federation_token: str = ""
+    # Comma-separated allowed CORS origins; "*" for local dev.
+    cors_origins: str = "*"
+
+    @field_validator("gemini_api_key", "federation_token", mode="after")
+    @classmethod
+    def _strip_secret_whitespace(cls, v: str) -> str:
+        # Secret managers and shell pipes commonly append trailing newlines;
+        # a stray \n breaks header values and token comparison.
+        return v.strip()
 
     @property
     def state_name(self) -> str:

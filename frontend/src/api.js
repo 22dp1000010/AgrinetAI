@@ -39,6 +39,8 @@ export const api = {
     if (lon != null) form.append('lon', lon)
     return request(node, '/api/diagnose', { method: 'POST', body: form })
   },
+  warnings: (node, lat, lon) => request(node, `/api/warnings?lat=${lat}&lon=${lon}`),
+  planner: (node, payload) => request(node, '/api/planner', json(payload)),
   stats: (node) => request(node, '/api/dashboard/stats'),
   heatmap: (node) => request(node, '/api/dashboard/heatmap'),
   alerts: (node) => request(node, '/v1/alerts'),

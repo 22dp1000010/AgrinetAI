@@ -1,0 +1,31 @@
+{
+  "rotation": [
+    {
+      "season": "Rabi (Nov–Feb)",
+      "crop": "Bengal gram (chana)",
+      "why": "A legume after paddy fixes nitrogen in your soil and needs little irrigation. Your soil organic carbon is on the lower side, and pulses improve it while giving a second income."
+    },
+    {
+      "season": "Summer (Mar–May)",
+      "crop": "Dhaincha green manure",
+      "why": "Grow dhaincha for 45–50 days and plough it in at flowering. It adds 60–80 kg nitrogen per hectare and builds soil structure before the next paddy crop — cutting your urea need."
+    },
+    {
+      "season": "Kharif (Jun–Oct)",
+      "crop": "Paddy (short-duration variety)",
+      "why": "Return to paddy on improved soil. A short-duration variety lowers water use and leaves time for the rabi pulse. Practise alternate wetting and drying to save about 25% water."
+    }
+  ],
+  "regenerative_plan": [
+    "Retain paddy stubble after harvest instead of burning — zero-till the rabi pulse directly into it.",
+    "Keep living roots in the soil year-round with this rotation to raise soil organic carbon.",
+    "Plant Gliricidia on field bunds for green leaf manure over the coming seasons."
+  ],
+  "soil_note": "Your soil pH is close to neutral, which suits both paddy and pulses. Organic carbon is below the ideal level — the green manure season is the fastest way to raise it. Confirm fertiliser doses for the pulse crop with your local KVK after a soil test.",
+  "citations": [
+    { "source": "ICAR Regenerative & Natural Farming Note 2026", "excerpt_ref": "regenerative_practices_chunk_2" },
+    { "source": "ICAR Regenerative & Natural Farming Note 2026", "excerpt_ref": "regenerative_practices_chunk_3" },
+    { "source": "ICAR–IIRR Kharif Paddy Advisory 2026-07", "excerpt_ref": "paddy_advisory_chunk_1" }
+  ],
+  "confidence_note": "Based on your soil, climate outlook and ICAR regenerative farming guidance. Local market prices and water availability should also guide the final choice — discuss with your KVK."
+}

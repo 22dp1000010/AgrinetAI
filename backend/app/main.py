@@ -8,7 +8,8 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .config import Settings, get_settings
 from .deps import Container
-from .routers import advisory, ask, dashboard, diagnose, federation
+from .ratelimit import RateLimitMiddleware
+from .routers import advisory, ask, dashboard, diagnose, federation, planner, warnings
 
 logging.basicConfig(level=logging.INFO)
 
@@ -22,18 +23,22 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
     app.state.container = Container(settings)
 
+    origins = [o.strip() for o in settings.cors_origins.split(",") if o.strip()]
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],  # hackathon prototype; restrict per-state in production
+        allow_origins=origins or ["*"],
         allow_methods=["*"],
         allow_headers=["*"],
     )
+    app.add_middleware(RateLimitMiddleware)
 
     app.include_router(advisory.router)
     app.include_router(diagnose.router)
     app.include_router(ask.router)
     app.include_router(dashboard.router)
     app.include_router(federation.router)
+    app.include_router(warnings.router)
+    app.include_router(planner.router)
 
     @app.get("/")
     def root():

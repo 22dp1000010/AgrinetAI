@@ -68,19 +68,37 @@ class CachedSatelliteProvider(SatelliteProvider):
 
 
 class EarthEngineProvider(SatelliteProvider):
-    """Live Sentinel-2 NDVI via Earth Engine. Import is deferred so the
-    dependency is only needed when EE_ENABLED=1."""
+    """Live Sentinel-2 NDVI/NDWI via Earth Engine. The import is deferred so
+    the dependency is only loaded when EE_ENABLED=1. On Cloud Run it
+    authenticates with the service account (Application Default Credentials);
+    locally, run `earthengine authenticate` once. Results are memoized per
+    rounded coordinate for the process lifetime (satellite features move
+    slowly; EE round-trips take seconds)."""
 
     def __init__(self, project: str = ""):
         import ee  # noqa: PLC0415 — optional dependency, deferred on purpose
 
-        ee.Initialize(project=project or None)
+        try:
+            ee.Initialize(project=project or None)
+        except Exception:
+            # Cloud Run / CI path: explicit ADC-scoped credentials.
+            import google.auth
+            credentials, adc_project = google.auth.default(
+                scopes=["https://www.googleapis.com/auth/earthengine",
+                        "https://www.googleapis.com/auth/cloud-platform"]
+            )
+            ee.Initialize(credentials, project=project or adc_project)
         self._ee = ee
+        self._memo: dict[tuple, dict] = {}
 
     def get_features(self, lat: float, lon: float) -> dict:
+        key = (round(lat, 2), round(lon, 2))
+        if key in self._memo:
+            return dict(self._memo[key])
+
+        import datetime
         ee = self._ee
         point = ee.Geometry.Point(lon, lat).buffer(250)
-        import datetime
         today = datetime.date.today()
         start = (today - datetime.timedelta(days=30)).isoformat()
         mid = (today - datetime.timedelta(days=15)).isoformat()
@@ -92,35 +110,34 @@ class EarthEngineProvider(SatelliteProvider):
             .filter(ee.Filter.lt("CLOUDY_PIXEL_PERCENTAGE", 30))
         )
 
-        def _ndvi_mean(collection):
+        def index_mean(collection, bands, name):
             img = collection.map(
-                lambda i: i.normalizedDifference(["B8", "B4"]).rename("NDVI")
+                lambda i: i.normalizedDifference(bands).rename(name)
             ).mean()
-            val = img.reduceRegion(ee.Reducer.mean(), point, 10).get("NDVI")
-            return val.getInfo() if val else None
+            stats = img.reduceRegion(ee.Reducer.mean(), point, 10).getInfo() or {}
+            return stats.get(name)
 
-        first_half = _ndvi_mean(col.filterDate(start, mid))
-        second_half = _ndvi_mean(col.filterDate(mid, today.isoformat()))
-        ndvi_mean = _ndvi_mean(col)
+        ndvi_mean = index_mean(col, ["B8", "B4"], "NDVI")
+        first_half = index_mean(col.filterDate(start, mid), ["B8", "B4"], "NDVI")
+        second_half = index_mean(
+            col.filterDate(mid, today.isoformat()), ["B8", "B4"], "NDVI")
+        ndwi_mean = index_mean(col, ["B3", "B8"], "NDWI")
 
         trend = "stable"
         if first_half is not None and second_half is not None:
             delta = second_half - first_half
-            trend = "improving" if delta > 0.03 else "declining" if delta < -0.03 else "stable"
+            trend = ("improving" if delta > 0.03
+                     else "declining" if delta < -0.03 else "stable")
 
-        ndwi_img = col.map(
-            lambda i: i.normalizedDifference(["B3", "B8"]).rename("NDWI")
-        ).mean()
-        ndwi_val = ndwi_img.reduceRegion(ee.Reducer.mean(), point, 10).get("NDWI")
-        ndwi_mean = ndwi_val.getInfo() if ndwi_val else None
-
-        return {
+        features = {
             "ndvi_mean": round(ndvi_mean, 3) if ndvi_mean is not None else None,
             "ndvi_trend": trend,
             "ndwi_mean": round(ndwi_mean, 3) if ndwi_mean is not None else None,
             "window_days": 30,
-            "source": "Sentinel-2 via Earth Engine (live)",
+            "source": f"Sentinel-2 via Earth Engine (live, {today.isoformat()})",
         }
+        self._memo[key] = features
+        return dict(features)
 
 
 def build_provider(ee_enabled: bool, ee_project: str = "") -> SatelliteProvider:

@@ -16,6 +16,7 @@ alert is created only once per disease+district.
 
 import argparse
 import io
+import os
 import random
 import struct
 import sys
@@ -89,7 +90,8 @@ def seed_outbreak(client: httpx.Client, node: str, reports: int = 3):
     return triggered
 
 
-def force_outbreak_alert(client: httpx.Client, node: str, peer: str):
+def force_outbreak_alert(client: httpx.Client, node: str, peer: str,
+                         token: str = ""):
     """Live-mode fallback: with DEMO_MODE=0 Gemini vision correctly refuses
     to diagnose the synthetic seed image with confidence, so no alert fires.
     Create the demo alert through the federation protocol instead: origin=TS,
@@ -109,8 +111,9 @@ def force_outbreak_alert(client: httpx.Client, node: str, peer: str):
         "message": ("Brown planthopper outbreak in paddy: 3 confirmed reports "
                     "in Warangal district (Telangana) within 7 days."),
     }
+    headers = {"X-AgriNet-Token": token} if token else {}
     for target in [node] + ([peer] if peer else []):
-        resp = client.post(f"{target}/v1/alerts", json=alert)
+        resp = client.post(f"{target}/v1/alerts", json=alert, headers=headers)
         resp.raise_for_status()
         print(f"  alert delivered to {target} (duplicate={resp.json()['duplicate']})")
 
@@ -124,6 +127,9 @@ def main():
     parser.add_argument("--queries", type=int, default=30,
                         help="advisory queries to seed (use ~10 against live-"
                              "Gemini nodes to stay inside free-tier rate limits)")
+    parser.add_argument("--token", default=os.environ.get("FEDERATION_TOKEN", ""),
+                        help="federation token, if the nodes require one for "
+                             "POST /v1/alerts (env FEDERATION_TOKEN also works)")
     args = parser.parse_args()
 
     with httpx.Client(timeout=60) as client:
@@ -141,7 +147,7 @@ def main():
             print("  no alert from diagnoses (live Gemini declined the synthetic "
                   "image — correct safety behaviour); forcing the demo alert "
                   "via the federation protocol…")
-            force_outbreak_alert(client, args.node, args.peer)
+            force_outbreak_alert(client, args.node, args.peer, args.token)
             alerts = client.get(f"{args.node}/v1/alerts").json()["alerts"]
         print(f"Origin node now has {len(alerts)} alert(s).")
 

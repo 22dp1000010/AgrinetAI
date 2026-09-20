@@ -1,10 +1,8 @@
 """Free-form Q&A pipeline (spec §5.3) — voice transcripts arrive here as text
 (the browser does STT/TTS via the Web Speech API)."""
 
-from sqlite3 import Connection
-
-from .. import db
 from ..models.schemas import AskRequest, AskResponse
+from ..storage import Store
 from .farms import infer_district
 from .gemini import GeminiService
 from .rag import Retriever
@@ -20,10 +18,10 @@ STRICT RULES:
 
 
 class AskService:
-    def __init__(self, retriever: Retriever, gemini: GeminiService, conn: Connection):
+    def __init__(self, retriever: Retriever, gemini: GeminiService, store: Store):
         self.retriever = retriever
         self.gemini = gemini
-        self.conn = conn
+        self.store = store
 
     def ask(self, req: AskRequest) -> AskResponse:
         chunks = self.retriever.retrieve(
@@ -50,6 +48,6 @@ Produce the answer JSON now."""
         district = req.district or (
             infer_district(req.lat, req.lon) if req.lat is not None and req.lon is not None else None
         )
-        db.log_query(self.conn, "ask", req.lat, req.lon, req.crop,
-                     district, req.language)
+        self.store.log_query("ask", req.lat, req.lon, req.crop,
+                             district, req.language)
         return AskResponse(**result, language=req.language)

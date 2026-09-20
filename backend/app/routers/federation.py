@@ -2,7 +2,9 @@
 The schema is defined in models/protocol.py; docs/AGRINET_PROTOCOL.md is the
 human-readable spec."""
 
-from fastapi import APIRouter, Depends
+import secrets
+
+from fastapi import APIRouter, Depends, Header, HTTPException
 
 from ..deps import Container, get_container, get_federation_service
 from ..models.protocol import (
@@ -11,6 +13,21 @@ from ..models.protocol import (
 from ..services.federation import FederationService
 
 router = APIRouter(prefix="/v1", tags=["federation"])
+
+
+def verify_federation_token(
+    c: Container = Depends(get_container),
+    x_agrinet_token: str | None = Header(default=None),
+):
+    """Shared-secret gate on federation WRITE endpoints. When
+    FEDERATION_TOKEN is unset (local dev) the endpoints stay open; when set,
+    peers must send it as X-AgriNet-Token. Reads stay public — the protocol
+    is an open data good."""
+    expected = c.settings.federation_token
+    if not expected:
+        return
+    if not x_agrinet_token or not secrets.compare_digest(x_agrinet_token, expected):
+        raise HTTPException(status_code=401, detail="invalid federation token")
 
 
 @router.get("/health", response_model=Health)
@@ -23,7 +40,8 @@ def list_alerts(service: FederationService = Depends(get_federation_service)):
     return {"protocol_version": PROTOCOL_VERSION, "alerts": service.list_alerts()}
 
 
-@router.post("/alerts", status_code=202)
+@router.post("/alerts", status_code=202,
+             dependencies=[Depends(verify_federation_token)])
 def receive_alert(alert: Alert,
                   service: FederationService = Depends(get_federation_service)):
     created = service.receive_alert(alert)
@@ -35,7 +53,8 @@ def list_insights(service: FederationService = Depends(get_federation_service)):
     return {"protocol_version": PROTOCOL_VERSION, "insights": service.list_insights()}
 
 
-@router.post("/insights", status_code=202)
+@router.post("/insights", status_code=202,
+             dependencies=[Depends(verify_federation_token)])
 def receive_insight(insight: Insight,
                     service: FederationService = Depends(get_federation_service)):
     created = service.add_insight(insight)

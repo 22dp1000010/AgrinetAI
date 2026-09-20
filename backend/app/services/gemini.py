@@ -16,17 +16,22 @@ import logging
 import re
 import time
 from pathlib import Path
-from sqlite3 import Connection
+from typing import TYPE_CHECKING
 
 from ..config import DATA_DIR, Settings
-from .. import db
+
+if TYPE_CHECKING:
+    from ..storage import Store
 
 log = logging.getLogger(__name__)
 
 DEMO_RESPONSES_DIR = DATA_DIR / "demo_responses"
 
-_MAX_RETRIES = 4
+_MAX_RETRIES = 2          # farmer-facing latency budget: at most ~2s of backoff
 _BASE_DELAY_S = 2.0
+# After a daily-quota 429, skip live calls entirely for this long — retrying
+# a per-day limit within minutes can never succeed.
+_QUOTA_COOLDOWN_S = 600
 
 
 class GeminiError(RuntimeError):
@@ -34,12 +39,13 @@ class GeminiError(RuntimeError):
 
 
 class GeminiService:
-    def __init__(self, settings: Settings, conn: Connection,
+    def __init__(self, settings: Settings, store: "Store",
                  demo_dir: Path = DEMO_RESPONSES_DIR):
         self.settings = settings
-        self.conn = conn
+        self.store = store
         self.demo_dir = demo_dir
         self._client = None  # lazy — only created in live mode
+        self._quota_block_until = 0.0  # monotonic-ish wall clock cooldown
 
     # --- public API ---
 
@@ -54,9 +60,16 @@ class GeminiService:
             return self._demo_response(task, language)
 
         cache_key = self._hash(task, prompt, language, image_bytes)
-        cached = db.cache_get(self.conn, cache_key, ttl_hours=24)
+        cached = self.store.cache_get(cache_key, ttl_hours=24)
         if cached is not None:
             return json.loads(cached)
+
+        # Daily quota already known to be exhausted: don't pay a failed API
+        # round-trip on every request — fall back (or fail) immediately.
+        if time.time() < self._quota_block_until:
+            if self.settings.demo_fallback:
+                return self._demo_response(task, language)
+            raise GeminiError("Gemini daily quota exhausted (cooldown active)")
 
         try:
             text = self._call_with_retry(prompt, image_bytes, image_mime)
@@ -72,7 +85,7 @@ class GeminiService:
                 )
                 return self._demo_response(task, language)
             raise
-        db.cache_put(self.conn, cache_key, json.dumps(parsed))
+        self.store.cache_put(cache_key, json.dumps(parsed))
         return parsed
 
     # --- demo mode ---
@@ -121,6 +134,11 @@ class GeminiService:
                 return resp.text
             except Exception as exc:
                 last_exc = exc
+                if self._is_daily_quota(exc):
+                    # A per-day limit cannot recover on retry: fail fast and
+                    # start a cooldown so subsequent requests skip the API.
+                    self._quota_block_until = time.time() + _QUOTA_COOLDOWN_S
+                    raise GeminiError(f"Gemini daily quota exhausted: {exc}") from exc
                 if not self._is_retryable(exc) or attempt == _MAX_RETRIES - 1:
                     raise GeminiError(f"Gemini call failed: {exc}") from exc
                 delay = _BASE_DELAY_S * (2 ** attempt)
@@ -132,6 +150,13 @@ class GeminiService:
     def _is_retryable(exc: Exception) -> bool:
         text = str(exc)
         return any(code in text for code in ("429", "500", "503", "RESOURCE_EXHAUSTED"))
+
+    @staticmethod
+    def _is_daily_quota(exc: Exception) -> bool:
+        # Only PER-DAY quota exhaustion warrants the long cooldown; per-minute
+        # 429s recover in seconds and go through the normal retry path.
+        text = str(exc)
+        return "429" in text and "PerDay" in text
 
     # --- helpers ---
 

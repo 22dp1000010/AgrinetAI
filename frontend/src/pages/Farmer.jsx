@@ -1,10 +1,12 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { api } from '../api.js'
 import { CROPS, CROP_LABELS } from '../i18n.js'
 import MapPicker from '../components/MapPicker.jsx'
 import ProvenanceStrip from '../components/ProvenanceStrip.jsx'
 import AdvisoryCard from '../components/AdvisoryCard.jsx'
 import DiagnosisCard from '../components/DiagnosisCard.jsx'
+import WarningBanner from '../components/WarningBanner.jsx'
+import PlannerCard from '../components/PlannerCard.jsx'
 import VoiceButton, { speak } from '../components/VoiceButton.jsx'
 
 const WARANGAL = [17.98, 79.53]
@@ -19,8 +21,20 @@ export default function Farmer({ node, language, t }) {
   const [question, setQuestion] = useState('')
   const [answer, setAnswer] = useState(null)
   const [askLoading, setAskLoading] = useState(false)
+  const [warnings, setWarnings] = useState([])
+  const [plan, setPlan] = useState(null)
+  const [planLoading, setPlanLoading] = useState(false)
   const [error, setError] = useState(null)
   const fileRef = useRef(null)
+
+  // Active outbreak warnings for this location (incl. federated ones).
+  useEffect(() => {
+    let cancelled = false
+    api.warnings(node, position[0], position[1])
+      .then((w) => !cancelled && setWarnings(w))
+      .catch(() => !cancelled && setWarnings([]))
+    return () => { cancelled = true }
+  }, [node, position])
 
   const cropLabels = CROP_LABELS[language]
 
@@ -67,8 +81,15 @@ export default function Farmer({ node, language, t }) {
     })
   }
 
+  const planSeasons = () =>
+    run(setPlanLoading, setPlan, () =>
+      api.planner(node, {
+        lat: position[0], lon: position[1], current_crop: crop, language,
+      }))
+
   return (
     <div className="max-w-md mx-auto space-y-4">
+      <WarningBanner warnings={warnings} t={t} />
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl p-3">
           {error}
@@ -164,6 +185,20 @@ export default function Farmer({ node, language, t }) {
             )}
           </div>
         )}
+      </section>
+
+      {/* Seasonal crop planner */}
+      <section className="bg-white border border-stone-200 rounded-2xl p-4 space-y-3 shadow-sm">
+        <h2 className="font-semibold">🗓️ {t.plannerTitle}</h2>
+        <p className="text-sm text-stone-500">{t.plannerHint}</p>
+        <button
+          onClick={planSeasons}
+          disabled={planLoading}
+          className="w-full bg-emerald-800 hover:bg-emerald-700 disabled:opacity-60 text-white font-semibold rounded-xl py-3 text-sm"
+        >
+          {planLoading ? t.planning : `🌾 ${t.planButton}`}
+        </button>
+        {plan && <PlannerCard plan={plan} t={t} />}
       </section>
     </div>
   )

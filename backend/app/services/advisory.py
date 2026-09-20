@@ -7,10 +7,9 @@ injected, so each stage is independently testable and swappable.
 
 import json
 import logging
-from sqlite3 import Connection
 
-from .. import db
 from ..models.schemas import AdvisoryRequest, AdvisoryResponse, DataProvenance
+from ..storage import Store
 from .farms import infer_district
 from .gemini import GeminiService
 from .rag import Retriever
@@ -42,13 +41,13 @@ STRICT RULES:
 class AdvisoryService:
     def __init__(self, satellite: SatelliteProvider, soil: SoilClient,
                  weather: WeatherClient, retriever: Retriever,
-                 gemini: GeminiService, conn: Connection):
+                 gemini: GeminiService, store: Store):
         self.satellite = satellite
         self.soil = soil
         self.weather = weather
         self.retriever = retriever
         self.gemini = gemini
-        self.conn = conn
+        self.store = store
 
     def get_advisory(self, req: AdvisoryRequest) -> AdvisoryResponse:
         sat = self.satellite.get_features(req.lat, req.lon)
@@ -62,8 +61,8 @@ class AdvisoryService:
         result = self.gemini.generate_json("advisory", prompt, language=req.language)
 
         district = req.district or infer_district(req.lat, req.lon)
-        db.log_query(self.conn, "advisory", req.lat, req.lon, req.crop,
-                     district, req.language)
+        self.store.log_query("advisory", req.lat, req.lon, req.crop,
+                             district, req.language)
 
         return AdvisoryResponse(
             **result,

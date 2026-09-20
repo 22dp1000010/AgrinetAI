@@ -87,6 +87,54 @@ class AskResponse(BaseModel):
     language: Language = "en"
 
 
+# --- farmer outbreak warnings ---
+
+class Prevention(BaseModel):
+    text: str
+    source: str
+
+
+class WarningItem(BaseModel):
+    """An active outbreak alert made farmer-facing: scoped to their district
+    or flagged as a regional/federated early warning, with a grounded
+    prevention tip retrieved from the advisory corpus."""
+    disease: str
+    crop: str | None = None
+    district: str | None = None
+    severity: str
+    origin_state: str
+    from_peer: bool
+    scope: Literal["your_district", "regional"]
+    message: str | None = None
+    created_at: str
+    prevention: Prevention | None = None
+
+
+# --- seasonal crop planner ---
+
+class PlannerRequest(BaseModel):
+    lat: float = Field(ge=-90, le=90)
+    lon: float = Field(ge=-180, le=180)
+    current_crop: str = Field(min_length=1)
+    language: Language = "en"
+
+
+class RotationStep(BaseModel):
+    season: str
+    crop: str
+    why: str
+
+
+class PlannerResponse(BaseModel):
+    rotation: list[RotationStep]
+    regenerative_plan: list[str] = []
+    soil_note: str | None = None
+    citations: list[Citation] = []
+    confidence_note: str | None = None
+    provenance: DataProvenance
+    language: Language = "en"
+
+
 # --- dashboard ---
 
 class DashboardStats(BaseModel):

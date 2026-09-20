@@ -5,10 +5,9 @@ diagnosis → anonymized DiseaseReport → outbreak check → federation alert.
 """
 
 import logging
-from sqlite3 import Connection
 
-from .. import db
 from ..models.schemas import DiagnosisResponse
+from ..storage import Store
 from .federation import FederationService
 from .gemini import GeminiService
 from .rag import Retriever
@@ -39,11 +38,11 @@ STRICT RULES:
 
 class DiagnosisService:
     def __init__(self, retriever: Retriever, gemini: GeminiService,
-                 federation: FederationService, conn: Connection):
+                 federation: FederationService, store: Store):
         self.retriever = retriever
         self.gemini = gemini
         self.federation = federation
-        self.conn = conn
+        self.store = store
 
     def diagnose(self, image_bytes: bytes, image_mime: str,
                  crop: str | None, language: str, district: str,
@@ -57,7 +56,7 @@ class DiagnosisService:
             image_bytes=image_bytes, image_mime=image_mime,
         )
 
-        db.log_query(self.conn, "diagnose", lat, lon, crop, district, language)
+        self.store.log_query("diagnose", lat, lon, crop, district, language)
 
         alert = None
         confidence = result.get("confidence", "low")

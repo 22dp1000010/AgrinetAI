@@ -1,15 +1,14 @@
 """Outbreak-threshold logic: N reports of the same disease in the same
 district within the window raises exactly one alert."""
 
-from app import db
 from app.services.federation import FederationService
+from app.storage import SQLiteStore
 from tests.conftest import make_settings
 
 
 def make_service(tmp_path, **overrides) -> FederationService:
     settings = make_settings(tmp_path, **overrides)
-    conn = db.connect(settings.database_path)
-    return FederationService(settings, conn)
+    return FederationService(settings, SQLiteStore(settings.database_path))
 
 
 def test_below_threshold_no_alert(tmp_path):

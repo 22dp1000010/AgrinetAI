@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 from app.config import Settings
 from app.main import create_app
 from app.services.advisory import AdvisoryService
+from app.services.planner import PlannerService
 
 
 class FakeSatellite:
@@ -48,9 +49,12 @@ def app(settings):
     application = create_app(settings)
     c = application.state.container
     c.satellite, c.soil, c.weather = FakeSatellite(), FakeSoil(), FakeWeather()
-    # Rebuild the advisory pipeline over the fakes (it captured the real ones).
+    # Rebuild the pipelines over the fakes (they captured the real providers).
     c.advisory = AdvisoryService(
-        c.satellite, c.soil, c.weather, c.retriever, c.gemini, c.conn,
+        c.satellite, c.soil, c.weather, c.retriever, c.gemini, c.store,
+    )
+    c.planner = PlannerService(
+        c.satellite, c.soil, c.weather, c.retriever, c.gemini, c.store,
     )
     return application
 

@@ -4,16 +4,15 @@ import json
 
 import pytest
 
-from app import db
 from app.services import gemini as gemini_module
 from app.services.gemini import GeminiError, GeminiService
+from app.storage import SQLiteStore
 from tests.conftest import make_settings
 
 
 def make_service(tmp_path, **overrides) -> GeminiService:
     settings = make_settings(tmp_path, **overrides)
-    conn = db.connect(settings.database_path)
-    return GeminiService(settings, conn)
+    return GeminiService(settings, SQLiteStore(settings.database_path))
 
 
 def test_demo_mode_serves_fixture_without_key(tmp_path):
@@ -82,8 +81,8 @@ def test_live_mode_uses_cache_and_retries_on_429(tmp_path, monkeypatch):
     class FakeModels:
         def generate_content(self, **kwargs):
             calls["n"] += 1
-            if calls["n"] < 3:
-                raise RuntimeError("429 RESOURCE_EXHAUSTED: quota")
+            if calls["n"] < 2:
+                raise RuntimeError("429 RESOURCE_EXHAUSTED: rate limit per minute")
             return FakeResponse()
 
     class FakeClient:
@@ -94,12 +93,41 @@ def test_live_mode_uses_cache_and_retries_on_429(tmp_path, monkeypatch):
 
     result = svc.generate_json("ask", "some question", language="en")
     assert result == {"answer": "ok", "citations": []}
-    assert calls["n"] == 3  # two 429s retried, third succeeded
+    assert calls["n"] == 2  # one transient 429 retried, second succeeded
 
     # Second identical call must be served from the SQLite cache.
     result2 = svc.generate_json("ask", "some question", language="en")
     assert result2 == result
-    assert calls["n"] == 3
+    assert calls["n"] == 2
+
+
+def test_daily_quota_fails_fast_and_starts_cooldown(tmp_path, monkeypatch):
+    svc = make_service(tmp_path, demo_mode=False, gemini_api_key="test-key")
+
+    calls = {"n": 0}
+
+    class FakeModels:
+        def generate_content(self, **kwargs):
+            calls["n"] += 1
+            raise RuntimeError(
+                "429 RESOURCE_EXHAUSTED: quotaId GenerateRequestsPerDayPerProjectPerModel-FreeTier"
+            )
+
+    class FakeClient:
+        models = FakeModels()
+
+    monkeypatch.setattr(svc, "_get_client", lambda: FakeClient())
+    monkeypatch.setattr(gemini_module.time, "sleep", lambda s: None)
+
+    # First request: exactly ONE API attempt (no retries), then demo fallback.
+    result = svc.generate_json("ask", "q1", language="en")
+    assert "answer" in result
+    assert calls["n"] == 1
+
+    # Cooldown active: the next request never touches the API at all.
+    result2 = svc.generate_json("ask", "a different question", language="en")
+    assert "answer" in result2
+    assert calls["n"] == 1
 
 
 def test_live_mode_gives_up_on_non_retryable(tmp_path, monkeypatch):
