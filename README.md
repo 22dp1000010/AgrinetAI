@@ -105,7 +105,7 @@ Deploys `agrinet-node-ts`, `agrinet-node-od` (peered via their real public URLs 
 - `backend/data/` — grounding corpus (**placeholder ICAR-style advisories — replace with verbatim extracts before submission**), satellite cache, canned DEMO_MODE responses, demo farms
 - `backend/tests/` — pytest suite
 - `frontend/` — React + Vite + Tailwind + Leaflet; Web Speech API voice; EN/TE/HI i18n (**machine translations — request native-speaker review**)
-- `docs/` — [ARCHITECTURE.md](docs/ARCHITECTURE.md), [AGRINET_PROTOCOL.md](docs/AGRINET_PROTOCOL.md), [PITCH_NOTES.md](docs/PITCH_NOTES.md)
+- `docs/` — [ARCHITECTURE.md](docs/ARCHITECTURE.md), [AGRINET_PROTOCOL.md](docs/AGRINET_PROTOCOL.md)
 - `deploy/deploy.sh` — Cloud Run deployment for all three services
 
 ## Production hardening
