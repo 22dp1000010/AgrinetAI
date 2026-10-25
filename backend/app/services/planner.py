@@ -10,8 +10,9 @@ import json
 
 from ..models.schemas import DataProvenance, PlannerRequest, PlannerResponse
 from ..storage import Store
-from .farms import infer_district
+from .advisory import OFFLINE_NOTE
 from .gemini import GeminiService
+from .geocode import Geocoder
 from .rag import Retriever
 from .satellite import SatelliteProvider
 from .soil import SoilClient
@@ -40,13 +41,14 @@ STRICT RULES:
 class PlannerService:
     def __init__(self, satellite: SatelliteProvider, soil: SoilClient,
                  weather: WeatherClient, retriever: Retriever,
-                 gemini: GeminiService, store: Store):
+                 gemini: GeminiService, store: Store, geocoder: Geocoder):
         self.satellite = satellite
         self.soil = soil
         self.weather = weather
         self.retriever = retriever
         self.gemini = gemini
         self.store = store
+        self.geocoder = geocoder
 
     def plan(self, req: PlannerRequest) -> PlannerResponse:
         sat = self.satellite.get_features(req.lat, req.lon)
@@ -59,12 +61,18 @@ class PlannerService:
         )
         prompt = self._build_prompt(req, sat, soil, weather, chunks)
         result = self.gemini.generate_json("planner", prompt, language=req.language)
+        fallback = result.pop("_fallback", False)
+        if fallback:
+            note = result.get("confidence_note") or ""
+            result["confidence_note"] = OFFLINE_NOTE + (" " + note if note else "")
 
         self.store.log_query("planner", req.lat, req.lon, req.current_crop,
-                             infer_district(req.lat, req.lon), req.language)
+                             self.geocoder.district_for(req.lat, req.lon),
+                             req.language)
 
         return PlannerResponse(
             **result,
+            offline_guidance=fallback,
             provenance=DataProvenance(satellite=sat, soil=soil, weather=weather),
             language=req.language,
         )

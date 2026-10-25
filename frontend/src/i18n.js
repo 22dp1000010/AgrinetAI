@@ -52,6 +52,8 @@ export const STRINGS = {
     planning: 'Planning your rotation…',
     soilNote: 'About your soil',
     regenerativePlan: 'Regenerative plan',
+    yourDistrict: 'Your district',
+    offlineGuidance: 'Offline guidance — live AI temporarily unavailable',
   },
   te: {
     appTitle: 'అగ్రినెట్',
@@ -104,6 +106,8 @@ export const STRINGS = {
     planning: 'మీ పంట మార్పిడిని ప్లాన్ చేస్తున్నాం…',
     soilNote: 'మీ నేల గురించి',
     regenerativePlan: 'పునరుజ్జీవన ప్రణాళిక',
+    yourDistrict: 'మీ జిల్లా',
+    offlineGuidance: 'ఆఫ్‌లైన్ మార్గదర్శకం — లైవ్ AI తాత్కాలికంగా అందుబాటులో లేదు',
   },
   hi: {
     appTitle: 'एग्रीनेट',
@@ -156,6 +160,8 @@ export const STRINGS = {
     planning: 'आपका फसल चक्र बन रहा है…',
     soilNote: 'आपकी मिट्टी के बारे में',
     regenerativePlan: 'पुनर्योजी योजना',
+    yourDistrict: 'आपका जिला',
+    offlineGuidance: 'ऑफ़लाइन मार्गदर्शन — लाइव AI अस्थायी रूप से अनुपलब्ध',
   },
 }
 

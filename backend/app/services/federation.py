@@ -124,10 +124,20 @@ class FederationService:
             peers.append(Peer(state_id=state_id, name=name, base_url=url))
         return peers
 
-    @staticmethod
-    def _identify_peer(url: str) -> tuple[str, str]:
-        # Best-effort identity from URL; a production registry would resolve
-        # this via each peer's /v1/health.
+    def _identify_peer(self, url: str) -> tuple[str, str]:
+        # Resolve identity from the peer's own /v1/health (cached for the
+        # process lifetime); fall back to a URL heuristic when unreachable.
+        if not hasattr(self, "_peer_identity_cache"):
+            self._peer_identity_cache: dict[str, tuple[str, str]] = {}
+        if url in self._peer_identity_cache:
+            return self._peer_identity_cache[url]
+        try:
+            health = self.http.get(f"{url}/v1/health").json()
+            identity = (health["state_id"], f"{health['state_name']} State Node")
+            self._peer_identity_cache[url] = identity
+            return identity
+        except Exception as exc:
+            log.debug("Peer health lookup failed for %s: %s", url, exc)
         lowered = url.lower()
         if "od" in lowered or "8002" in lowered:
             return "OD", "Odisha State Node"

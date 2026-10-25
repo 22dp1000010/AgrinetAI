@@ -1,9 +1,8 @@
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 
-from ..deps import get_diagnosis_service
+from ..deps import Container, get_container, get_diagnosis_service
 from ..models.schemas import DiagnosisResponse
 from ..services.diagnosis import DiagnosisService
-from ..services.farms import infer_district
 from ..services.gemini import GeminiError
 
 router = APIRouter(prefix="/api", tags=["diagnose"])
@@ -21,6 +20,7 @@ async def diagnose(
     lat: float | None = Form(None),
     lon: float | None = Form(None),
     service: DiagnosisService = Depends(get_diagnosis_service),
+    c: Container = Depends(get_container),
 ):
     mime = image.content_type or "image/jpeg"
     if mime not in _ALLOWED_MIME:
@@ -32,7 +32,8 @@ async def diagnose(
         raise HTTPException(422, "language must be en, te or hi")
 
     resolved_district = district or (
-        infer_district(lat, lon) if lat is not None and lon is not None else "Unknown"
+        c.geocoder.district_for(lat, lon)
+        if lat is not None and lon is not None else "Unknown"
     )
     try:
         return service.diagnose(

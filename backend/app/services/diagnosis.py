@@ -55,12 +55,21 @@ class DiagnosisService:
             "diagnosis", prompt, language=language,
             image_bytes=image_bytes, image_mime=image_mime,
         )
+        fallback = result.pop("_fallback", False)
+        if fallback:
+            note = result.get("safety_note") or ""
+            result["safety_note"] = (
+                "[Offline guidance] Live AI could not examine this photo; this is "
+                "general reference guidance. "
+            ) + note
 
         self.store.log_query("diagnose", lat, lon, crop, district, language)
 
         alert = None
         confidence = result.get("confidence", "low")
-        if confidence in ("high", "medium") and result.get("disease"):
+        # A fallback response never examined the actual photo — recording it
+        # as a confirmed diagnosis would poison the outbreak data.
+        if not fallback and confidence in ("high", "medium") and result.get("disease"):
             alert = self.federation.record_report_and_check_outbreak(
                 disease=result["disease"], crop=crop,
                 district=district, confidence=confidence,
@@ -69,6 +78,7 @@ class DiagnosisService:
         return DiagnosisResponse(
             **result,
             alert_triggered=alert is not None,
+            offline_guidance=fallback,
             language=language,
         )
 

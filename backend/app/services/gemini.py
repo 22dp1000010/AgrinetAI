@@ -68,7 +68,7 @@ class GeminiService:
         # round-trip on every request — fall back (or fail) immediately.
         if time.time() < self._quota_block_until:
             if self.settings.demo_fallback:
-                return self._demo_response(task, language)
+                return self._demo_response(task, language) | {"_fallback": True}
             raise GeminiError("Gemini daily quota exhausted (cooldown active)")
 
         try:
@@ -83,7 +83,9 @@ class GeminiService:
                     "Live Gemini call for task '%s' failed; serving demo fallback",
                     task, exc_info=True,
                 )
-                return self._demo_response(task, language)
+                # Marked so pipelines can label the response as offline
+                # guidance rather than passing it off as live AI.
+                return self._demo_response(task, language) | {"_fallback": True}
             raise
         self.store.cache_put(cache_key, json.dumps(parsed))
         return parsed
@@ -103,12 +105,25 @@ class GeminiService:
 
     def _get_client(self):
         if self._client is None:
-            if not self.settings.gemini_api_key:
-                raise GeminiError(
-                    "GEMINI_API_KEY is not set. Add it to .env, or set DEMO_MODE=1."
-                )
             from google import genai  # deferred so DEMO_MODE needs no SDK
-            self._client = genai.Client(api_key=self.settings.gemini_api_key)
+            if self.settings.use_vertex_ai:
+                # Service-account auth (ADC) — no API key involved.
+                project = (self.settings.vertex_project
+                           or self.settings.firestore_project
+                           or self.settings.ee_project)
+                if not project:
+                    raise GeminiError("USE_VERTEX_AI=1 requires VERTEX_PROJECT")
+                self._client = genai.Client(
+                    vertexai=True, project=project,
+                    location=self.settings.vertex_location or "global",
+                )
+            else:
+                if not self.settings.gemini_api_key:
+                    raise GeminiError(
+                        "GEMINI_API_KEY is not set. Add it to .env, set "
+                        "USE_VERTEX_AI=1 (cloud), or set DEMO_MODE=1."
+                    )
+                self._client = genai.Client(api_key=self.settings.gemini_api_key)
         return self._client
 
     def _call_with_retry(self, prompt: str, image_bytes: bytes | None,

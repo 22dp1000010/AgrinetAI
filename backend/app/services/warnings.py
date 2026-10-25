@@ -11,7 +11,7 @@ from datetime import datetime, timedelta, timezone
 
 from ..models.schemas import Prevention, WarningItem
 from ..storage import Store
-from .farms import infer_district
+from .geocode import Geocoder
 from .rag import Retriever
 
 # Alerts older than this are no longer shown to farmers.
@@ -19,12 +19,13 @@ ACTIVE_WINDOW_DAYS = 30
 
 
 class WarningsService:
-    def __init__(self, retriever: Retriever, store: Store):
+    def __init__(self, retriever: Retriever, store: Store, geocoder: Geocoder):
         self.retriever = retriever
         self.store = store
+        self.geocoder = geocoder
 
     def for_location(self, lat: float, lon: float) -> list[WarningItem]:
-        district = infer_district(lat, lon)
+        district = self.geocoder.district_for(lat, lon)
         cutoff = datetime.now(timezone.utc) - timedelta(days=ACTIVE_WINDOW_DAYS)
         warnings: list[WarningItem] = []
         for alert in self.store.list_alerts():

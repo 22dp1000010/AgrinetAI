@@ -10,8 +10,8 @@ import logging
 
 from ..models.schemas import AdvisoryRequest, AdvisoryResponse, DataProvenance
 from ..storage import Store
-from .farms import infer_district
 from .gemini import GeminiService
+from .geocode import Geocoder
 from .rag import Retriever
 from .satellite import SatelliteProvider
 from .soil import SoilClient
@@ -20,6 +20,9 @@ from .weather import WeatherClient
 log = logging.getLogger(__name__)
 
 _LANGUAGE_NAMES = {"en": "English", "te": "Telugu", "hi": "Hindi"}
+
+OFFLINE_NOTE = ("[Offline guidance] Live AI was temporarily unavailable; this is "
+                "pre-verified general guidance, not location-specific reasoning.")
 
 SYSTEM_PROMPT = """You are AgriNet, an agricultural advisory assistant for Indian farmers.
 STRICT RULES:
@@ -41,13 +44,14 @@ STRICT RULES:
 class AdvisoryService:
     def __init__(self, satellite: SatelliteProvider, soil: SoilClient,
                  weather: WeatherClient, retriever: Retriever,
-                 gemini: GeminiService, store: Store):
+                 gemini: GeminiService, store: Store, geocoder: Geocoder):
         self.satellite = satellite
         self.soil = soil
         self.weather = weather
         self.retriever = retriever
         self.gemini = gemini
         self.store = store
+        self.geocoder = geocoder
 
     def get_advisory(self, req: AdvisoryRequest) -> AdvisoryResponse:
         sat = self.satellite.get_features(req.lat, req.lon)
@@ -59,13 +63,19 @@ class AdvisoryService:
 
         prompt = self._build_prompt(req, sat, soil, weather, chunks)
         result = self.gemini.generate_json("advisory", prompt, language=req.language)
+        fallback = result.pop("_fallback", False)
+        if fallback:
+            note = result.get("confidence_note") or ""
+            result["confidence_note"] = (OFFLINE_NOTE + (" " + note if note else ""))
 
-        district = req.district or infer_district(req.lat, req.lon)
+        district = req.district or self.geocoder.district_for(req.lat, req.lon)
         self.store.log_query("advisory", req.lat, req.lon, req.crop,
                              district, req.language)
 
         return AdvisoryResponse(
             **result,
+            district=district,
+            offline_guidance=fallback,
             provenance=DataProvenance(satellite=sat, soil=soil, weather=weather),
             language=req.language,
         )

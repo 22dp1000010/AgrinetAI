@@ -7,6 +7,8 @@
 __pycache__/
 *.pyc
 .pytest_cache/
+.coverage
+htmlcov/
 
 # Node
 node_modules/
@@ -17,7 +19,23 @@ dist/
 *.sqlite3
 backend/data/http_cache/
 
+# Node/Vite env files with baked URLs or keys
+frontend/.env
+frontend/.env.local
+frontend/.env.production
+
+# Logs & local scratch
+*.log
+*.local.*
+
+# Internal pitch/prep material — not part of the public repo
+docs/PITCH_NOTES.md
+docs/GAMMA_DECK.md
+docs/BUILD_NOTES.md
+AGRINET_BUILD_SPEC.md
+
 # OS / editor
 .DS_Store
 Thumbs.db
 .vscode/
+.idea/

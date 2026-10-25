@@ -11,6 +11,7 @@ from .services.ask import AskService
 from .services.diagnosis import DiagnosisService
 from .services.federation import FederationService
 from .services.gemini import GeminiService
+from .services.geocode import Geocoder
 from .services.planner import PlannerService
 from .services.rag import Retriever
 from .services.satellite import build_provider
@@ -28,6 +29,7 @@ class Container:
         # Direct SQLite handle for tests/tooling; None on Firestore.
         self.conn = getattr(self.store, "conn", None)
         self.retriever = Retriever()
+        self.geocoder = Geocoder()
         self.gemini = GeminiService(self.settings, self.store)
         self.satellite = build_provider(self.settings.ee_enabled, self.settings.ee_project)
         self.soil = SoilClient()
@@ -35,16 +37,16 @@ class Container:
         self.federation = FederationService(self.settings, self.store)
         self.advisory = AdvisoryService(
             self.satellite, self.soil, self.weather,
-            self.retriever, self.gemini, self.store,
+            self.retriever, self.gemini, self.store, self.geocoder,
         )
         self.diagnosis = DiagnosisService(
             self.retriever, self.gemini, self.federation, self.store,
         )
-        self.ask = AskService(self.retriever, self.gemini, self.store)
-        self.warnings = WarningsService(self.retriever, self.store)
+        self.ask = AskService(self.retriever, self.gemini, self.store, self.geocoder)
+        self.warnings = WarningsService(self.retriever, self.store, self.geocoder)
         self.planner = PlannerService(
             self.satellite, self.soil, self.weather,
-            self.retriever, self.gemini, self.store,
+            self.retriever, self.gemini, self.store, self.geocoder,
         )
 
 

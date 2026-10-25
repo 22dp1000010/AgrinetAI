@@ -11,6 +11,14 @@ import VoiceButton, { speak } from '../components/VoiceButton.jsx'
 
 const WARANGAL = [17.98, 79.53]
 
+function OfflineChip({ t }) {
+  return (
+    <p className="inline-flex items-center gap-1.5 text-xs font-medium text-amber-800 bg-amber-50 border border-amber-300 rounded-full px-2.5 py-1">
+      ⚡ {t.offlineGuidance}
+    </p>
+  )
+}
+
 export default function Farmer({ node, language, t }) {
   const [position, setPosition] = useState(WARANGAL)
   const [crop, setCrop] = useState('paddy')
@@ -128,6 +136,12 @@ export default function Farmer({ node, language, t }) {
 
       {advisory && (
         <section className="space-y-3">
+          {advisory.offline_guidance && <OfflineChip t={t} />}
+          {advisory.district && (
+            <p className="text-sm text-stone-600 px-1">
+              📍 {t.yourDistrict}: <span className="font-semibold">{advisory.district}</span>
+            </p>
+          )}
           <ProvenanceStrip provenance={advisory.provenance} t={t} />
           <AdvisoryCard advisory={advisory} t={t} />
         </section>
@@ -148,6 +162,7 @@ export default function Farmer({ node, language, t }) {
         >
           {diagnosisLoading ? t.diagnosing : `📷 ${t.uploadLeaf}`}
         </button>
+        {diagnosis?.offline_guidance && <OfflineChip t={t} />}
         {diagnosis && <DiagnosisCard result={diagnosis} t={t} />}
       </section>
 
@@ -176,7 +191,8 @@ export default function Farmer({ node, language, t }) {
           {askLoading ? '…' : t.askButton}
         </button>
         {answer && (
-          <div className="bg-stone-50 border border-stone-200 rounded-xl p-3">
+          <div className="bg-stone-50 border border-stone-200 rounded-xl p-3 space-y-2">
+            {answer.offline_guidance && <OfflineChip t={t} />}
             <p className="text-sm text-stone-800">{answer.answer}</p>
             {answer.citations?.length > 0 && (
               <p className="text-xs text-stone-400 mt-2">
@@ -198,6 +214,7 @@ export default function Farmer({ node, language, t }) {
         >
           {planLoading ? t.planning : `🌾 ${t.planButton}`}
         </button>
+        {plan?.offline_guidance && <OfflineChip t={t} />}
         {plan && <PlannerCard plan={plan} t={t} />}
       </section>
     </div>

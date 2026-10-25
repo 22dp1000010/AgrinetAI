@@ -51,6 +51,8 @@ class AdvisoryResponse(BaseModel):
     citations: list[Citation] = []
     confidence_note: str | None = None
     provenance: DataProvenance
+    district: str | None = None
+    offline_guidance: bool = False
     language: Language = "en"
     cached: bool = False
 
@@ -67,6 +69,7 @@ class DiagnosisResponse(BaseModel):
     citations: list[Citation] = []
     safety_note: str | None = None
     alert_triggered: bool = False
+    offline_guidance: bool = False
     language: Language = "en"
 
 
@@ -84,6 +87,7 @@ class AskRequest(BaseModel):
 class AskResponse(BaseModel):
     answer: str
     citations: list[Citation] = []
+    offline_guidance: bool = False
     language: Language = "en"
 
 
@@ -132,6 +136,7 @@ class PlannerResponse(BaseModel):
     citations: list[Citation] = []
     confidence_note: str | None = None
     provenance: DataProvenance
+    offline_guidance: bool = False
     language: Language = "en"
 
 

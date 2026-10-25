@@ -1,10 +1,10 @@
 """Free-form Q&A pipeline (spec §5.3) — voice transcripts arrive here as text
 (the browser does STT/TTS via the Web Speech API)."""
 
-from ..models.schemas import AskRequest, AskResponse
+from ..models.schemas import AskRequest, AskResponse, Citation
 from ..storage import Store
-from .farms import infer_district
 from .gemini import GeminiService
+from .geocode import Geocoder
 from .rag import Retriever
 
 _LANGUAGE_NAMES = {"en": "English", "te": "Telugu", "hi": "Hindi"}
@@ -18,10 +18,12 @@ STRICT RULES:
 
 
 class AskService:
-    def __init__(self, retriever: Retriever, gemini: GeminiService, store: Store):
+    def __init__(self, retriever: Retriever, gemini: GeminiService,
+                 store: Store, geocoder: Geocoder):
         self.retriever = retriever
         self.gemini = gemini
         self.store = store
+        self.geocoder = geocoder
 
     def ask(self, req: AskRequest) -> AskResponse:
         chunks = self.retriever.retrieve(
@@ -44,10 +46,34 @@ ADVISORY EXCERPTS:
 {language_line}
 Produce the answer JSON now."""
         result = self.gemini.generate_json("ask", prompt, language=req.language)
+        fallback = result.pop("_fallback", False)
+        if fallback:
+            # Live AI unavailable: answer extractively from the retrieved
+            # corpus so the reply still matches THIS question and stays
+            # grounded — never the same canned text for every query.
+            result = self._extractive_answer(chunks, result)
 
         district = req.district or (
-            infer_district(req.lat, req.lon) if req.lat is not None and req.lon is not None else None
+            self.geocoder.district_for(req.lat, req.lon)
+            if req.lat is not None and req.lon is not None else None
         )
         self.store.log_query("ask", req.lat, req.lon, req.crop,
                              district, req.language)
-        return AskResponse(**result, language=req.language)
+        return AskResponse(**result, offline_guidance=fallback,
+                           language=req.language)
+
+    @staticmethod
+    def _extractive_answer(chunks, canned: dict) -> dict:
+        if not chunks:
+            return canned  # last resort: the canned fixture
+        top = chunks[0]
+        answer = (
+            f"Live AI is temporarily unavailable, so here is the verified "
+            f"advisory text that best matches your question — from {top.source}: "
+            f"{top.text}"
+        )
+        return {
+            "answer": answer,
+            "citations": [Citation(source=c.source, excerpt_ref=c.id).model_dump()
+                          for c in chunks[:2]],
+        }

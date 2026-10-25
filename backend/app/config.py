@@ -26,6 +26,12 @@ class Settings(BaseSettings):
 
     gemini_api_key: str = ""
     gemini_model: str = "gemini-flash-latest"
+    # Vertex AI mode: authenticate with the runtime service account (ADC)
+    # instead of an API key — no key to expire, billed to the GCP project,
+    # pay-as-you-go rate limits. Local dev keeps the API-key / DEMO_MODE paths.
+    use_vertex_ai: bool = False
+    vertex_project: str = ""
+    vertex_location: str = "global"
     state_id: str = "TS"
     port: int = 8001
     peers: str = ""

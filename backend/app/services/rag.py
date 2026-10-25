@@ -73,8 +73,11 @@ class Retriever:
             return 0.0
         score = 0.0
         for term in set(query_tokens):
-            tf = chunk.tokens.count(term) / len(chunk.tokens)
-            score += tf * self._idf(term)
+            count = chunk.tokens.count(term)
+            if count:
+                # Log-saturated tf (BM25-style): repeated rare terms win
+                # without letting short chunks dominate via length division.
+                score += (1.0 + math.log(count)) * self._idf(term)
         return score
 
     def retrieve(self, query: str, k: int = 4) -> list[Chunk]:
